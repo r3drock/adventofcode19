@@ -1,4 +1,5 @@
 use std::fs;
+use std::process;
 
 fn read_data() -> Vec<usize> {
     let mut program: Vec<usize> = Vec::new();
@@ -10,13 +11,13 @@ fn read_data() -> Vec<usize> {
             Err(_) => (),
         };
     }
-    program[1] = 12;
-    program[2] = 2;
     program
 }
 
-fn run_program(mut program: Vec<usize>) -> usize {
-    print_program(&program);
+fn run_program(mut program: Vec<usize>, noun: usize, verb: usize, print: bool) -> usize {
+    program[1] = noun;
+    program[2] = verb;
+    if print {print_program(&program);}
 
     let size = program.len();
     let mut index = 0;
@@ -30,7 +31,7 @@ fn run_program(mut program: Vec<usize>) -> usize {
         };
         index += 4;
     }
-    print_program(&program);
+    if print {print_program(&program);}
     program[0]
 }
 
@@ -49,7 +50,24 @@ fn print_program(program: &Vec<usize>) {
     println!("\n------------------------------------------------");
 }
 
-fn main() {
+fn part1() {
     let program: Vec<usize> = read_data();
-    println!("Result: {}", run_program(program));
+    println!("Result: {}", run_program(program, 12, 2, true));
+}
+
+fn part2() {
+    let program: Vec<usize> = read_data();
+    for noun in 1..100 {
+        for verb in 1..100 {
+            let programcopy = program.clone();
+            if 19690720 == run_program(programcopy, noun, verb, false) {
+                println!("noun: {}, verb: {}", noun, verb);
+                std::process::exit(0);
+            }
+        }
+    }
+}
+fn main() {
+    part1();
+    part2();
 }
