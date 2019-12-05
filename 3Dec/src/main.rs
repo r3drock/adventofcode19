@@ -6,7 +6,8 @@ use std::fs;
 static mut X_START: isize = 0;
 static mut Y_START: isize = 0;
 
-fn calculate_dimensions (cable1: &Vec<(char, isize)>, cable2: &Vec<(char, isize)>) -> (isize, isize, isize, isize, isize, isize) {
+fn calculate_dimensions (cable1: &Vec<(char, isize)>, cable2: &Vec<(char, isize)>)
+-> (isize, isize, isize, isize, isize, isize) {
     let mut y_min = 0;
     let mut y_max = 0;
     let mut x_min = 0;
@@ -41,13 +42,24 @@ fn calculate_dimensions (cable1: &Vec<(char, isize)>, cable2: &Vec<(char, isize)
     unsafe {
         X_START = -x_min as isize;
         Y_START = -y_min as isize;
-//        println!("X_START: {}, Y_START: {}, x_max: {}, y_max:{}, x_min: {}, y_min: {}, x_len: {}, y_len: {}",
-//                X_START, Y_START, x_max, y_max, x_min, y_min, x_len, y_len);
     }
 
     (x_len, y_len, x_min, x_max, y_min, y_max)
 }
 
+fn set_at_u32(x: isize, y: isize, x_len: isize, val: u32, field: &mut Vec<u32>) {
+    unsafe {
+        let index = (x + X_START + ((y + Y_START ) * x_len)) as usize;
+        field[index] = val;
+    }
+}
+
+fn at_u32(x: isize, y: isize, x_len: isize, field: &Vec<u32>) -> u32{
+    unsafe {
+        let index = (x + X_START + ((y + Y_START ) * x_len)) as usize;
+        field[index]
+    }
+}
 fn set_at(x: isize, y: isize, x_len: isize, val: u8, field: &mut Vec<u8>) {
     unsafe {
         let index = (x + X_START + ((y + Y_START ) * x_len)) as usize;
@@ -62,7 +74,8 @@ fn at(x: isize, y: isize, x_len: isize, field: &Vec<u8>) -> u8{
     }
 }
 
-fn printfield(x_min: isize, x_max: isize, y_min: isize, y_max: isize, x_len: isize, field: &Vec<u8>) {
+fn printfield(x_min: isize, x_max: isize, y_min: isize, y_max: isize,
+              x_len: isize, field: &Vec<u8>) {
     for _ in 0..x_len {print!("█");}
     println!();
 
@@ -96,38 +109,48 @@ fn get_new_color(current_color: u8, color: u8) -> u8 {
     }
 }
 
-fn lay_cable (cable: Vec<(char, isize)>, x_len: isize, color: u8, mut field: &mut Vec<u8>) {
+fn lay_cable (cable: Vec<(char, isize)>, x_len: isize, color: u8,
+              mut field: &mut Vec<u8>, mut distancefield_cable: &mut Vec<u32>) {
     let mut x = 0;
     let mut y = 0;
 
+    let mut current_length = 0;
     for (direction, length) in cable {
         match direction {
             'D' => {
                 for _ in 0..length {
+                    current_length += 1;
                     y -= 1;
                     let current_color = at(x, y, x_len, &field);
                     set_at(x, y, x_len, get_new_color(current_color, color), &mut field);
+                    set_at_u32(x, y, x_len, current_length, &mut distancefield_cable);
                 }
             },
             'U' => {
                 for _ in 0..length {
+                    current_length += 1;
                     y += 1;
                     let current_color = at(x, y, x_len, &field);
                     set_at(x, y, x_len, get_new_color(current_color, color), &mut field);
+                    set_at_u32(x, y, x_len, current_length, &mut distancefield_cable);
                 }
             },
             'L' => {
                 for _ in 0..length {
+                    current_length += 1;
                     x -= 1;
                     let current_color = at(x, y, x_len, &field);
                     set_at(x, y, x_len, get_new_color(current_color, color), &mut field);
+                    set_at_u32(x, y, x_len, current_length, &mut distancefield_cable);
                 }
             },
             'R' => {
                 for _ in 0..length {
+                    current_length += 1;
                     x += 1;
                     let current_color = at(x, y, x_len, &field);
                     set_at(x, y, x_len, get_new_color(current_color, color), &mut field);
+                    set_at_u32(x, y, x_len, current_length, &mut distancefield_cable);
                 }
             },
             _ => panic!("Wrong directions in input.")
@@ -135,12 +158,18 @@ fn lay_cable (cable: Vec<(char, isize)>, x_len: isize, color: u8, mut field: &mu
     }
 }
 
-fn calculate_min_distance(x_min: isize, x_max: isize, y_min: isize, y_max: isize, x_len: isize, field: &Vec<u8>) -> isize{
-    let mut min_distance = std::isize::MAX;
+fn calculate_min_distance(x_min: isize, x_max: isize, y_min: isize, 
+                          y_max: isize, x_len: isize,
+                          field: &Vec<u8>, distancefield_cable1: &Vec<u32>,
+                          distancefield_cable2: &Vec<u32>) -> u32{
+    let mut min_distance = std::u32::MAX;
     for y in (y_min..y_max+1).rev() {
         for x in x_min..x_max+1 {
-            if at(x,y, x_len, &field) == 3 && min_distance > (x.abs() + y.abs()) {
-                min_distance = x.abs() + y.abs();
+            if at(x,y, x_len, &field) == 3 &&
+                  min_distance > (at_u32(x, y, x_len, &distancefield_cable1) +
+                                    at_u32(x, y, x_len, &distancefield_cable2)) {
+                min_distance = at_u32(x, y, x_len, &distancefield_cable1) +
+                                at_u32(x, y, x_len, &distancefield_cable2);
             };
         }
     }
@@ -182,13 +211,16 @@ fn main() {
         printfield(x_min, x_max, y_min, y_max, x_len, &field);
     };
 
-    lay_cable(cable1, x_len, 1, &mut field);
-    lay_cable(cable2, x_len, 2, &mut field);
+    let mut distancefield_cable1: Vec<u32> = vec![0;(x_len * y_len) as usize];
+    let mut distancefield_cable2: Vec<u32> = vec![0;(x_len * y_len) as usize];
+    lay_cable(cable1, x_len, 1, &mut field, &mut distancefield_cable1);//, &mut distancefield);
+    lay_cable(cable2, x_len, 2, &mut field, &mut distancefield_cable2);
 
     if x_len < 200 && y_len < 200 {
         printfield(x_min, x_max, y_min, y_max, x_len, &field);
     };
 
     println!("min manhattan distance: {}",
-             calculate_min_distance(x_min, x_max, y_min, y_max, x_len, &field));
+             calculate_min_distance(x_min, x_max, y_min, y_max, x_len, &field,
+                                    &distancefield_cable1, &distancefield_cable2));
 }
