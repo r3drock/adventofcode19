@@ -40,33 +40,30 @@ fn get_modes (mut value: usize) -> (usize, usize, usize) {
     }
 }
 
-fn access(ip: usize, mode: usize, index: usize, program: &Vec<isize>) -> isize {
+fn access(mode: usize, index: usize, program: &Vec<isize>) -> isize {
     if mode == 0 {program[conv(program[index])]} else {program[index]}
 }
 
-fn run_program(mut program: Vec<isize>, print: bool) {
-    if print {print_program(&program);}
-
+fn run_program(mut program: Vec<isize>) {
     let size = program.len();
     let mut ip: usize = 0;
     while ip < size - (size % 4) {
-                //print_program(&program);
         let (mode1, mode2, mode3) = get_modes(conv(program[ip]));
 
         match get_opcode(conv(program[ip])) {
             //add
             1 => {
-                let index_to_overwrite = conv(access(ip, mode3, ip+3, &program)); 
-                program[index_to_overwrite] = access(ip, mode1, ip+1, &program) +
-                                              access(ip, mode2, ip+2, &program);
+                let index_to_overwrite = if mode3 == 0 {conv(program[ip+3])} else {ip+3};
+                program[index_to_overwrite] = access(mode1, ip+1, &program) +
+                                              access(mode2, ip+2, &program);
                 ip += 4;
             }
 
             //mul
             2 => {
-                let index_to_overwrite = conv(access(ip, mode3, ip+3, &program)); 
-                program[index_to_overwrite] = access(ip, mode1, ip+1, &program) *
-                                              access(ip, mode2, ip+2, &program);
+                let index_to_overwrite = if mode3 == 0 {conv(program[ip+3])} else {ip+3};
+                program[index_to_overwrite] = access(mode1, ip+1, &program) *
+                                              access(mode2, ip+2, &program);
                 ip += 4;
             }
 
@@ -82,21 +79,21 @@ fn run_program(mut program: Vec<isize>, print: bool) {
                     Err(_) => continue,
                 };
 
-                let index_to_overwrite = conv(access(ip,mode1, ip+1, &program));
+                let index_to_overwrite = if mode1 == 0 {conv(program[ip+1])} else {ip+1};
                 program[index_to_overwrite] = input;
                 ip += 2;
             },
 
             //output
             4 => {
-                println!("{}", conv(access(ip, mode1, ip+1, &program)));
+                println!("{}", conv(access(mode1, ip+1, &program)));
                 ip += 2;
             },
 
             //jump-if-true
             5 => {
-                ip = if program[ip+1] != 0 {
-                    conv(program[ip+2])
+                ip = if access(mode1, ip+1, &program) != 0 {
+                    conv(access(mode2, ip+2, &program))
                 } else {
                     ip + 3
                 };
@@ -104,8 +101,8 @@ fn run_program(mut program: Vec<isize>, print: bool) {
 
             //jump-if-false
             6 => {
-                ip = if program[ip+1] == 0 {
-                    conv(program[ip+2])
+                ip = if access(mode1, ip+1, &program) == 0 {
+                    conv(access(mode2, ip+2, &program))
                 } else {
                     ip + 3
                 };
@@ -113,14 +110,32 @@ fn run_program(mut program: Vec<isize>, print: bool) {
 
             //less than
             7 => {
+                let index_to_overwrite = if mode3 == 0 {conv(program[ip+3])} else {ip+3};
+                program[index_to_overwrite] =
+                    if access(mode1, ip+1, &program) < access(mode2, ip+2, &program) {
+                    1
+                } else {
+                    0
+                };
+                ip += 4;
+            }
 
+            //equals
+            8 => {
+                let index_to_overwrite = if mode3 == 0 {conv(program[ip+3])} else {ip+3};
+                program[index_to_overwrite] =
+                    if access(mode1, ip+1, &program) == access(mode2, ip+2, &program) {
+                    1
+                } else {
+                    0
+                };
+                ip += 4;
             }
             99 => break,
             _ => panic!("illegal opcode"),
         };
         
     }
-    //if print {print_program(&program);}
 }
 
 fn print_program(program: &Vec<isize>) {
@@ -134,6 +149,10 @@ fn print_program(program: &Vec<isize>) {
                 2  => 4,
                 3  => 2,
                 4  => 2,
+                5  => 3,
+                6  => 3,
+                7  => 4,
+                8  => 4,
                 99 => 1,
                 _  => 1,
             };
@@ -149,5 +168,5 @@ fn print_program(program: &Vec<isize>) {
 
 fn main() {
     let program = read_data();
-    run_program(program, false);
+    run_program(program);
 }
