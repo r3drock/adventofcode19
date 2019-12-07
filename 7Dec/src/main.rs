@@ -45,7 +45,7 @@ fn access(mode: usize, index: usize, program: &Vec<isize>) -> isize {
     if mode == 0 {program[conv(program[index])]} else {program[index]}
 }
 
-fn run_program(mut program: Vec<isize>, input_vec: Vec<isize>) -> Option<isize> {
+fn run_program(mut program: Vec<isize>, input_vec: Vec<isize>, terminated: &mut bool) -> Option<isize> {
     let mut output: Option<isize> = None;
     let mut input_vec_iterator = input_vec.iter();
     let size = program.len();
@@ -141,10 +141,10 @@ fn run_program(mut program: Vec<isize>, input_vec: Vec<isize>) -> Option<isize> 
                 };
                 ip += 4;
             }
-            99 => break,
+            99 => break,//{*terminated = true; break;},
             _ => panic!("illegal opcode"),
         };
-        
+
     }
     output
 }
@@ -176,6 +176,7 @@ fn print_program(program: &Vec<isize>) {
     }
     println!("------------------------------------------------");
 }
+
 fn part1() {
     let program = read_data();
 
@@ -187,18 +188,66 @@ fn part1() {
         permutations.push(data.clone());
     }
 
+    let mut terminated = false;
     let mut max = 0;
     for input in permutations {
-        let mut output = run_program(program.clone(), vec![input[0],0]).unwrap();
-        output = run_program(program.clone(), vec![input[1], output]).unwrap();
-        output = run_program(program.clone(), vec![input[2], output]).unwrap();
-        output = run_program(program.clone(), vec![input[3], output]).unwrap();
-        output = run_program(program.clone(), vec![input[4], output]).unwrap();
+        let mut output = run_program(program.clone(), vec![input[0],0], &mut terminated).unwrap();
+        output = run_program(program.clone(), vec![input[1], output], &mut terminated).unwrap();
+        output = run_program(program.clone(), vec![input[2], output], &mut terminated).unwrap();
+        output = run_program(program.clone(), vec![input[3], output], &mut terminated).unwrap();
+        output = run_program(program.clone(), vec![input[4], output], &mut terminated).unwrap();
         if output > max {max = output;};
     }
     println!("Highest signal that can be sent to the thrusters: {}", max);
 }
 
+fn part2() {
+    let program = read_data();
+
+    let mut data = vec![5, 6, 7, 8, 9];
+    let heap = Heap::new(&mut data);
+
+    let mut permutations = Vec::new();
+    for data in heap {
+        permutations.push(data.clone());
+    }
+
+    let mut terminated = false;
+    let mut max = 0;
+    for input in permutations {
+            let program_A = program.clone();
+            let program_B = program.clone();
+            let program_C = program.clone();
+            let program_D = program.clone();
+            let program_E = program.clone();
+            let mut output = run_program(program.clone(), vec![input[0], 0], &mut terminated).unwrap();
+            output = run_program(program.clone(), vec![input[1], output], &mut terminated).unwrap();
+            let output = run_program(program.clone(), vec![input[2], output], &mut terminated).unwrap();
+            let mut output = run_program(program.clone(), vec![input[3], output], &mut terminated).unwrap();
+            let last_amplifier_output = run_program(program.clone(), vec![input[4], output], &mut terminated).unwrap();
+            if terminated {
+                if last_amplifier_output > max {max = last_amplifier_output;};
+                continue;
+            }
+            loop {
+                output = run_program(program.clone(), vec![output], &mut terminated).unwrap();
+                if terminated {break;}
+                output = run_program(program.clone(), vec![output], &mut terminated).unwrap();
+                if terminated {break;}
+                output = run_program(program.clone(), vec![output], &mut terminated).unwrap();
+                if terminated {break;}
+                output = run_program(program.clone(), vec![output], &mut terminated).unwrap();
+                if terminated {break;}
+                let last_amplifier_output = run_program(program.clone(), vec![output], &mut terminated).unwrap();
+                output = last_amplifier_output;
+                if terminated {break;}
+
+            }
+            if last_amplifier_output > max {max = last_amplifier_output;};
+        }
+    println!("Highest signal that can be sent to the thrusters: {}", max);
+}
+
 fn main() {
-    part1();
+    part2();
 }
