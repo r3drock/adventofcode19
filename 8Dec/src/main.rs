@@ -17,7 +17,7 @@ fn at(digits: &Vec<u8>, i: usize, y: usize , x: usize) -> u8 {
     digits[(i*X_LEN*Y_LEN) + (y*X_LEN) + x]
 }
 
-fn get_layers(digits: Vec<u8>) -> (Vec<Vec<Vec<u8>>>, usize){
+fn get_layers(digits: Vec<u8>) -> (Vec<Vec<Vec<u8>>>, usize) {
     let len = digits.len();
     let layer_count = len / (X_LEN * Y_LEN);
     let mut layer_with_fewest_zeros_index = 0;
