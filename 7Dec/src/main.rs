@@ -2,11 +2,12 @@ use std::io;
 use std::fs;
 use std::convert::TryFrom;
 use permutohedron::Heap;
+use std::collections::VecDeque;
 
 #[derive(Debug)]
 struct Amplifier {
     ip: usize,
-    inputbuffer: Vec<isize>,
+    inputbuffer: VecDeque<isize>,
     program: Vec<isize>,
 }
 
@@ -55,23 +56,41 @@ fn access(mode: usize, index: usize, program: &Vec<isize>) -> isize {
 
 impl Amplifier {
     fn new(program: Vec<isize>, input: Vec<isize>) -> Amplifier {
-        Amplifier { inputbuffer: input, program: program, ip : 0 }
+        Amplifier { inputbuffer: VecDeque::from(input), program: program, ip : 0 }
     }
 
     fn push_input(&mut self, input: isize) {
-        self.inputbuffer.push(input);
+        self.inputbuffer.push_back(input);
     }
 
-    fn run_program(&mut self, terminated: &mut bool) -> Option<isize> {
+    fn pp(&self) {
+        print!("[");
+        for (i, item) in self.program.iter().enumerate() {
+            if i == self.ip {
+            print!(">{}<, ", item);
+            } else {
+            print!("{}, ", item);
+            }
+        }
+        println!("]");
+    }
+
+    fn run_program(&mut self, terminated: &mut bool, debug: bool) -> Option<isize> {
         let mut output: Option<isize> = None;
         let size = self.program.len();
         while self.ip < size - (size % 4) {
             let (mode1, mode2, mode3) = get_modes(conv(self.program[self.ip]));
 
+            if debug {self.pp()};
             match get_opcode(conv(self.program[self.ip])) {
                 //add
                 1 => {
                     let index_to_overwrite = if mode3 == 0 {conv(self.program[self.ip+3])} else {self.ip+3};
+                    if debug {
+                        println!("ADD {}, {}, {}", access(mode1, self.ip+1, &self.program), 
+                                                   access(mode2, self.ip+1, &self.program),
+                                                   self.program[self.ip+3] );
+                    };
                     self.program[index_to_overwrite] = access(mode1, self.ip+1, &self.program) +
                                                   access(mode2, self.ip+2, &self.program);
                     self.ip += 4;
@@ -80,6 +99,11 @@ impl Amplifier {
                 //mul
                 2 => {
                     let index_to_overwrite = if mode3 == 0 {conv(self.program[self.ip+3])} else {self.ip+3};
+                    if debug {
+                        println!("MUL {}, {}, {}", access(mode1, self.ip+1, &self.program), 
+                                                   access(mode2, self.ip+1, &self.program),
+                                                   self.program[self.ip+3] );
+                    };
                     self.program[index_to_overwrite] = access(mode1, self.ip+1, &self.program) *
                                                   access(mode2, self.ip+2, &self.program);
                     self.ip += 4;
@@ -88,8 +112,11 @@ impl Amplifier {
                 //input
                 //reads from input_vec and if it is not present from stdin
                 3 => {
-                    let input: isize = match self.inputbuffer.first() {
-                        Some(num) => *num,
+                    let input: isize = match self.inputbuffer.pop_front() {
+                        Some(num) => { 
+                            if debug {println!("input {}", num);};
+                            num
+                        },
                         None => {
                             let mut input_string = String::new();
                             println!("Please input a number.");
@@ -111,7 +138,7 @@ impl Amplifier {
                 //output
                 4 => {
                     output = Some(access(mode1, self.ip+1, &self.program));
-                    //println!("{}", output.unwrap());
+                    if debug { println!("output: {}", output.unwrap()); };
                     self.ip += 2;
                     break;
                 },
@@ -197,7 +224,7 @@ fn print_program(program: &Vec<isize>) {
 fn part1() {
     let program = read_data();
 
-    let mut data = vec![0, 1, 2, 3, 4];
+    let mut data = vec![4, 3, 2, 1, 0];
     let heap = Heap::new(&mut data);
 
     let mut permutations = Vec::new();
@@ -207,6 +234,7 @@ fn part1() {
 
     let mut terminated = false;
     let mut max = 0;
+    let debug =  false;
     for input in permutations {
         let mut amplifier_a = Amplifier::new(program.clone(), vec![input[0],0]); 
         let mut amplifier_b = Amplifier::new(program.clone(), vec![input[1]]); 
@@ -214,69 +242,104 @@ fn part1() {
         let mut amplifier_d = Amplifier::new(program.clone(), vec![input[3]]); 
         let mut amplifier_e = Amplifier::new(program.clone(), vec![input[4]]); 
 
-        let output = amplifier_a.run_program(&mut terminated).unwrap();
+        if debug { println!("amplifier A starting"); }
+        let output = amplifier_a.run_program(&mut terminated, debug).unwrap();
         amplifier_b.push_input(output);
-        let output = amplifier_b.run_program(&mut terminated).unwrap();
+        if debug { println!("amplifier B starting"); }
+        let output = amplifier_b.run_program(&mut terminated, debug).unwrap();
         amplifier_c.push_input(output);
-        let output = amplifier_c.run_program(&mut terminated).unwrap();
+        if debug { println!("amplifier C starting"); }
+        let output = amplifier_c.run_program(&mut terminated, debug).unwrap();
         amplifier_d.push_input(output);
-        let output = amplifier_d.run_program(&mut terminated).unwrap();
+        if debug { println!("amplifier D starting"); }
+        let output = amplifier_d.run_program(&mut terminated, debug).unwrap();
         amplifier_e.push_input(output);
-        let output = amplifier_e.run_program(&mut terminated).unwrap();
+        if debug { println!("amplifier E starting"); }
+        let output = amplifier_e.run_program(&mut terminated, debug).unwrap();
 
-        println!("output: {}", output);
+        if debug { println!("output: {}", output); }
         if output > max {max = output;};
     }
     println!("Highest signal that can be sent to the thrusters: {}", max);
 }
 
-//fn part2() {
-//    let program = read_data();
-//
-//    let mut data = vec![5, 6, 7, 8, 9];
-//    let heap = Heap::new(&mut data);
-//
-//    let mut permutations = Vec::new();
-//    for data in heap {
-//        permutations.push(data.clone());
-//    }
-//
-//    let mut terminated = false;
-//    let mut max = 0;
-//    for input in permutations {
-//            let program_A = program.clone();
-//            let program_B = program.clone();
-//            let program_C = program.clone();
-//            let program_D = program.clone();
-//            let program_E = program.clone();
-//            let mut output = run_program(program.clone(), vec![input[0], 0], &mut terminated).unwrap();
-//            output = run_program(program.clone(), vec![input[1], output], &mut terminated).unwrap();
-//            let output = run_program(program.clone(), vec![input[2], output], &mut terminated).unwrap();
-//            let mut output = run_program(program.clone(), vec![input[3], output], &mut terminated).unwrap();
-//            let last_amplifier_output = run_program(program.clone(), vec![input[4], output], &mut terminated).unwrap();
-//            if terminated {
-//                if last_amplifier_output > max {max = last_amplifier_output;};
-//                continue;
-//            }
-//            loop {
-//                output = run_program(program.clone(), vec![output], &mut terminated).unwrap();
-//                if terminated {break;}
-//                output = run_program(program.clone(), vec![output], &mut terminated).unwrap();
-//                if terminated {break;}
-//                output = run_program(program.clone(), vec![output], &mut terminated).unwrap();
-//                if terminated {break;}
-//                output = run_program(program.clone(), vec![output], &mut terminated).unwrap();
-//                if terminated {break;}
-//                let last_amplifier_output = run_program(program.clone(), vec![output], &mut terminated).unwrap();
-//                output = last_amplifier_output;
-//                if terminated {break;}
-//
-//            }
-//            if last_amplifier_output > max {max = last_amplifier_output;};
-//        }
-//    println!("Highest signal that can be sent to the thrusters: {}", max);
-//}
+fn part2() {
+    let program = read_data();
+
+    let mut data = vec![5, 6, 7, 8, 9];
+    let heap = Heap::new(&mut data);
+
+    let mut permutations = Vec::new();
+    for data in heap {
+        permutations.push(data.clone());
+    }
+
+    let mut terminated = false;
+    let mut max = 0;
+    let debug = false;
+    for input in permutations {
+            let mut amplifier_a = Amplifier::new(program.clone(), vec![input[0],0]); 
+            let mut amplifier_b = Amplifier::new(program.clone(), vec![input[1]]); 
+            let mut amplifier_c = Amplifier::new(program.clone(), vec![input[2]]); 
+            let mut amplifier_d = Amplifier::new(program.clone(), vec![input[3]]); 
+            let mut amplifier_e = Amplifier::new(program.clone(), vec![input[4]]); 
+
+            if debug { println!("amplifier A starting"); }
+            let mut output = amplifier_a.run_program(&mut terminated, debug).unwrap();
+
+            amplifier_b.push_input(output);
+            if debug { println!("amplifier B starting"); }
+            output = amplifier_b.run_program(&mut terminated, debug).unwrap();
+
+            amplifier_c.push_input(output);
+            if debug { println!("amplifier C starting"); }
+            output = amplifier_c.run_program(&mut terminated, debug).unwrap();
+
+            amplifier_d.push_input(output);
+            if debug { println!("amplifier D starting"); }
+            output = amplifier_d.run_program(&mut terminated, debug).unwrap();
+            
+            amplifier_e.push_input(output);
+            if debug { println!("amplifier E starting"); }
+            output = amplifier_e.run_program(&mut terminated, debug).unwrap();
+            let mut last_amplifier_output = output;
+
+            if terminated {
+                if last_amplifier_output > max {max = last_amplifier_output;};
+                continue;
+            }
+            loop {
+                amplifier_b.push_input(output);
+                if debug { println!("amplifier B starting"); }
+                output = amplifier_b.run_program(&mut terminated, debug).unwrap();
+                if terminated {break;}
+
+                amplifier_b.push_input(output);
+                if debug { println!("amplifier B starting"); }
+                output = amplifier_b.run_program(&mut terminated, debug).unwrap();
+                if terminated {break;}
+
+                amplifier_b.push_input(output);
+                if debug { println!("amplifier B starting"); }
+                output = amplifier_b.run_program(&mut terminated, debug).unwrap();
+                if terminated {break;}
+
+                amplifier_b.push_input(output);
+                if debug { println!("amplifier B starting"); }
+                output = amplifier_b.run_program(&mut terminated, debug).unwrap();
+                if terminated {break;}
+
+                amplifier_b.push_input(output);
+                if debug { println!("amplifier B starting"); }
+                output = amplifier_b.run_program(&mut terminated, debug).unwrap();
+                last_amplifier_output = last_amplifier_output;
+                if terminated {break;}
+            }
+            if last_amplifier_output > max {max = last_amplifier_output;};
+        }
+    println!("Highest signal that can be sent to the thrusters: {}", max);
+}
 
 fn main() {
-    part1();
+    part2();
 }
