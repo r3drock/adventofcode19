@@ -83,13 +83,14 @@ impl Amplifier {
 
     fn pp(&self) {
         print!("[");
+        let mut was_zero = false;
         for (i, item) in self.program.iter().enumerate() {
             if i == self.ip {
             print!(">{}<, ", item);
             } else {
             print!("{}, ", item);
             }
-            if *item == 0 as isize {break;}
+            if *item == 0 as isize {if was_zero {break;} else {was_zero = true;}} else {was_zero = false;}
         }
         println!("]");
     }
@@ -261,11 +262,29 @@ fn part1() {
     let mut computer = Amplifier::new(program.clone(), vec![]); 
     computer.push_input(1);
     let debug = false;
-    let output = computer.run_program(debug).unwrap();
-    println!("{}", output);
+    computer.run_program(debug).unwrap();
 }
 
+fn part2() {
+    let program = read_data("data");
+    let mut computer = Amplifier::new(program.clone(), vec![]); 
+    computer.push_input(2);
+    let debug = false;
+    computer.run_program(debug).unwrap();
+}
+
+fn quine() {
+    let program = read_data("quine");
+    let mut computer = Amplifier::new(program.clone(), vec![]); 
+    computer.push_input(2);
+    let debug = false;
+    computer.run_program(debug).unwrap();
+}
 
 fn main() {
     part1();
+    println!("--------------");
+    part2();
+    println!("--------------");
+    quine();
 }
