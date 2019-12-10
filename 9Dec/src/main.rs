@@ -76,7 +76,7 @@ impl Amplifier {
         match mode {
             0 => {conv(self.program[index])},
             1 => {index},
-            2 => {conv(self.program[conv(index as isize + self.rb)])},
+            2 => {conv(self.program[index] + self.rb)},
             _ => panic!("Wrong mode"),
         }
     }
