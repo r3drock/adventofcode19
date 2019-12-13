@@ -14,7 +14,7 @@ struct Amplifier {
 
 fn read_data(file_name: &str) -> Vec<isize> {
     let mut program: Vec<isize> = Vec::new();
-    let data = fs::read_to_string(file_name)
+    let data: String = fs::read_to_string(file_name)
         .expect("Something went wrong reading the file");
     for line in data.split(',') {
         match line.parse::<isize>() {
@@ -282,9 +282,9 @@ fn quine() {
 }
 
 fn main() {
-    part1();
-    println!("--------------");
+   // part1();
+  //  println!("--------------");
     part2();
-    println!("--------------");
-    quine();
+//    println!("--------------");
+ //   quine();
 }
