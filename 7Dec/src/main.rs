@@ -265,7 +265,7 @@ fn part1() {
         let output = amplifier_e.run_program(debug).unwrap();
 
         if debug { println!("output: {}", output); }
-        if output > max {max = output;};
+        if output > max {max = output; println!("{:?}", input);};
     }
     println!("Highest signal that can be sent to the thrusters: {}", max);
 }

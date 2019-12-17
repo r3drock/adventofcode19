@@ -119,14 +119,6 @@ pub mod intcode {
         pub mode3: Mode,
     }
 
-    //impl PartialEq for Modes {
-    //    fn eq(&self, other: &Self) -> bool {
-    //        self.mode1 == other.mode1 &&
-    //        self.mode2 == other.mode2 &&
-    //        self.mode3 == other.mode3
-    //    }
-    //}
-
     pub fn get_modes(mut value: usize) -> Modes {
         value /= 100;
         let m1 = into_mode(value % 10);
@@ -291,7 +283,7 @@ pub mod intcode {
             if debug {
                 println!("outputaddr {} = {}", inst.first(), output);
             };
-            println!("{}", output);
+            //println!("{}", output);
             self.ip += 2;
             output
         }
@@ -402,7 +394,7 @@ pub mod intcode {
                 };
                 print!("");
                 match inst {
-                    Instruction::NOOP => continue,
+                    Instruction::NOOP => panic!("NOOP"),
                     Instruction::ADD(_, _, _) => self.add(inst, debug),
                     Instruction::MULT(_, _, _) => self.mult(inst, debug),
                     Instruction::READ(_) => self.read(inst, debug),
@@ -422,6 +414,41 @@ pub mod intcode {
             }
             output
         }
+
+        pub fn run_program_until_output(&mut self, debug: bool) -> Option<isize> {
+            let mut output: Option<isize> = None;
+            let size = self.program.len();
+            if self.ip >= size {
+                return output;
+            }
+            loop {
+                let inst = self.parse_instruction();
+                if debug {
+                    self.print_program()
+                };
+                print!("");
+                match inst {
+                    Instruction::NOOP => continue,
+                    Instruction::ADD(_, _, _) => self.add(inst, debug),
+                    Instruction::MULT(_, _, _) => self.mult(inst, debug),
+                    Instruction::READ(_) => self.read(inst, debug),
+                    Instruction::WRITE(_) => {output = Some(self.write(inst, debug)); break;},
+                    Instruction::JUMPIFTRUE(_, _) => self.jump_if_true(inst, debug),
+                    Instruction::JUMPIFFALSE(_, _) => self.jump_if_false(inst, debug),
+                    Instruction::LESSTHAN(_, _, _) => self.less_than(inst, debug),
+                    Instruction::EQUALS(_, _, _) => self.equals(inst, debug),
+                    Instruction::ADJUSTRB(_) => self.adjust_rb(inst, debug),
+                    Instruction::HALT => {
+                        if debug {
+                            println!("END")
+                        };
+                        break;
+                    }
+                }
+            }
+            output
+        }
+
         pub fn run_program_in_compatibility_mode(&mut self, noun: isize, verb: isize, debug: bool) -> isize {
             self.program[1] = noun;
             self.program[2] = verb;
@@ -654,6 +681,7 @@ mod tests {
         computer.push_input(1);
         assert_eq!(1, computer.run_program(false).unwrap());
     }
+
     #[test]
     fn day5_part2() {
         let program = crate::intcode::read_data("5");
@@ -661,4 +689,43 @@ mod tests {
         computer.push_input(5);
         assert_eq!(9006327, computer.run_program(false).unwrap());
     }
+
+    #[test]
+    fn day7_part1() {
+        let program = crate::intcode::read_data("7");
+
+        let mut amp_a = crate::intcode::Amplifier::new_test(program.clone(), vec![4]);
+        amp_a.push_input(0);
+        let output = amp_a.run_program(false).unwrap();
+        let mut amp_b = crate::intcode::Amplifier::new_test(program.clone(), vec![0]);
+        amp_b.push_input(output);
+        let output = amp_b.run_program(false).unwrap();
+        let mut amp_c = crate::intcode::Amplifier::new_test(program.clone(), vec![2]);
+        amp_c.push_input(output);
+        let output = amp_c.run_program(false).unwrap();
+        let mut amp_d = crate::intcode::Amplifier::new_test(program.clone(), vec![3]);
+        amp_d.push_input(output);
+        let output = amp_d.run_program(false).unwrap();
+        let mut amp_e = crate::intcode::Amplifier::new_test(program.clone(), vec![1]);
+        amp_e.push_input(output);
+        let result = amp_e.run_program(false).unwrap();
+        assert_eq!(11828, result);
+    }
+
+    #[test]
+    fn day9_part1() {
+        let program = crate::intcode::read_data("9");
+        let mut computer = crate::intcode::Amplifier::new(program, vec![1]);
+        let result = computer.run_program(false).unwrap();
+        assert_eq!(3497884671, result);
+    }
+
+    #[test]
+    fn day9_part2() {
+        let program = crate::intcode::read_data("9");
+        let mut computer = crate::intcode::Amplifier::new(program, vec![2]);
+        let result = computer.run_program(false).unwrap();
+        assert_eq!(46470, result);
+    }
+
 }
