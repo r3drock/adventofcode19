@@ -1,49 +1,53 @@
+use petgraph::algo::astar;
+use petgraph::dot::{Config, Dot};
+use petgraph::graphmap::{DiGraphMap, UnGraphMap};
 use std::fs;
-use petgraph::graphmap::{DiGraphMap,UnGraphMap};
-use petgraph::dot::{Dot,Config};
 
-
-fn add_orbit_to_undirected_graph<'a>(mut graph: UnGraphMap<&'a str, u8>, orbit_description: &'a str) -> UnGraphMap<&'a str, u8> {
+fn add_orbit_to_undirected_graph<'a>(
+    mut graph: UnGraphMap<&'a str, u8>,
+    orbit_description: &'a str,
+) -> UnGraphMap<&'a str, u8> {
     let mut desc = orbit_description.split(')');
     let planet = desc.next().expect("No planet object found.");
     let orbiter = desc.next().expect("No orbiter object found.");
 
-    if ! graph.contains_node(planet){
+    if !graph.contains_node(planet) {
         graph.add_node(planet);
     }
-    if ! graph.contains_node(orbiter){
+    if !graph.contains_node(orbiter) {
         graph.add_node(orbiter);
     }
-    if ! graph.contains_edge(planet, orbiter) {
+    if !graph.contains_edge(planet, orbiter) {
+        graph.add_edge(planet, orbiter, 1);
+    }
+    graph
+}
+
+fn add_orbit_to_graph<'a>(
+    mut graph: DiGraphMap<&'a str, u8>,
+    orbit_description: &'a str,
+) -> DiGraphMap<&'a str, u8> {
+    let mut desc = orbit_description.split(')');
+    let planet = desc.next().expect("No planet object found.");
+    let orbiter = desc.next().expect("No orbiter object found.");
+
+    if !graph.contains_node(planet) {
+        graph.add_node(planet);
+    }
+    if !graph.contains_node(orbiter) {
+        graph.add_node(orbiter);
+    }
+    if !graph.contains_edge(planet, orbiter) {
         graph.add_edge(planet, orbiter, 1);
     }
 
     graph
 }
 
-fn add_orbit_to_graph<'a>(mut graph: DiGraphMap<&'a str, u8>, orbit_description: &'a str) -> DiGraphMap<&'a str, u8> {
-    let mut desc = orbit_description.split(')');
-    let planet = desc.next().expect("No planet object found.");
-    let orbiter = desc.next().expect("No orbiter object found.");
-
-    if ! graph.contains_node(planet){
-        graph.add_node(planet);
-    }
-    if ! graph.contains_node(orbiter){
-        graph.add_node(orbiter);
-    }
-    if ! graph.contains_edge(planet, orbiter) {
-        graph.add_edge(planet, orbiter, 1);
-    }
-
-    graph
-}
-
-
-fn count_number_of_orbits (graph: &DiGraphMap<&str, u8>, root: &str, mut depth: usize) -> usize {
+fn count_number_of_orbits(graph: &DiGraphMap<&str, u8>, root: &str, mut depth: usize) -> usize {
     let mut number_of_orbits: usize = depth;
     depth += 1;
-    let mut neighbours = graph.neighbors_directed(root,petgraph::Direction::Outgoing);
+    let mut neighbours = graph.neighbors_directed(root, petgraph::Direction::Outgoing);
 
     while let Some(nx) = neighbours.next() {
         number_of_orbits += count_number_of_orbits(&graph, &nx, depth);
@@ -52,8 +56,7 @@ fn count_number_of_orbits (graph: &DiGraphMap<&str, u8>, root: &str, mut depth: 
 }
 
 fn main() {
-    let data = fs::read_to_string("data")
-        .expect("Something went wrong reading the file");
+    let data = fs::read_to_string("data").expect("Something went wrong reading the file");
     let mut digraph = DiGraphMap::<&str, u8>::new();
     let mut undigraph = UnGraphMap::<&str, u8>::new();
     let root = digraph.add_node("COM");
@@ -64,6 +67,13 @@ fn main() {
         undigraph = add_orbit_to_undirected_graph(undigraph, &line);
     }
 
-    println!("{:?}", Dot::with_config(&undigraph, &[Config::EdgeNoLabel]));
+    //println!("{:?}", Dot::with_config(&undigraph, &[Config::EdgeNoLabel]));
     println!("{}", count_number_of_orbits(&digraph, &root, 0));
+    println!(
+        "shortest path is {} hops away",
+        astar(&undigraph, "YOU", |finish| finish == "SAN", |_| 1, |_| 0)
+            .unwrap()
+            .0
+            - 2
+    );
 }
