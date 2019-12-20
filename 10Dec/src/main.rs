@@ -62,6 +62,7 @@ fn read_data(file_name: &str) -> (Vec<Vec<Object>>, usize, usize) {
     (space, x_len, y_len)
 }
 
+#[allow(dead_code)]
 fn print_space(space: &Vec<Vec<Object>>, x_len: usize, y_len: usize) {
     for y in 0..y_len {
         for x in 0..x_len {
