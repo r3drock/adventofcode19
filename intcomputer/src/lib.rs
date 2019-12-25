@@ -728,4 +728,12 @@ mod tests {
         assert_eq!(46470, result);
     }
 
+    #[test]
+    fn day_13_part1() {
+        let program = crate::intcode::read_data("9");
+        let mut computer = crate::intcode::Amplifier::new(program, vec![2]);
+        let result = computer.run_program(false).unwrap();
+        print!("{}", result);
+    }
+
 }
