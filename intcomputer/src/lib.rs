@@ -77,7 +77,7 @@ pub mod intcode {
     pub fn read_data(file_name: &str) -> Vec<isize> {
         let mut program: Vec<isize> = Vec::new();
         let data = fs::read_to_string(file_name).expect("Something went wrong reading the file");
-        for line in data.split(',') {
+        for line in data.split(",") {
             match line.parse::<isize>() {
                 Ok(x) => program.push(x),
                 Err(_) => (),
@@ -168,7 +168,7 @@ pub mod intcode {
             }
         }
 
-        fn print_program(&self) {
+        pub fn print_program(&self) {
             print!("[");
             let mut was_zero = 0;
             for (i, item) in self.program.iter().enumerate() {
@@ -234,7 +234,8 @@ pub mod intcode {
 
         pub fn add(&mut self, inst: Instruction, debug: bool) {
             if debug {
-                println!("ADD {}, {}, {}", inst.target(), inst.first(), inst.second());
+                println!("[{}] := [{}] + [{}]\n {} = {} + {}", inst.target(), inst.first(), inst.second(),
+                self.program[inst.first()] + self.program[inst.second()], self.program[inst.first()], self.program[inst.second()]);
             };
             self.program[inst.target()] = self.program[inst.first()] + self.program[inst.second()];
             self.ip += 4;
@@ -289,15 +290,18 @@ pub mod intcode {
         }
 
         fn jump_if_true(&mut self, inst: Instruction, debug: bool) {
+            if debug {
+                println!("jump if [{}] containing [{}]", inst.first(), self.program[inst.first()]);
+            };
             self.ip = if self.program[inst.first()] != 0 {
                 if debug {
-                    println!("jump if true {}", self.program[inst.second()]);
-                };
+                    println!(" jump to {}", self.program[inst.second()]);
+                }
                 conv(self.program[inst.second()])
             } else {
                 if debug {
-                    println!("not jump if true {}", self.ip + 3);
-                };
+                    println!(" jump to {}", self.ip + 3);
+                }
                 self.ip + 3
             };
         }
@@ -343,24 +347,30 @@ pub mod intcode {
         }
 
         fn equals(&mut self, inst: Instruction, debug: bool) {
+            if debug {
+                println!(
+                    "[{}] := [{}] == [{}]",
+                    inst.target(),
+                    inst.first(),
+                    inst.second()
+                );
+            }
             self.program[inst.target()] =
                 if self.program[inst.first()] == self.program[inst.second()] {
                     if debug {
                         println!(
-                            "equals {} {} {}",
+                            " {} == {}",
                             self.program[inst.first()],
                             self.program[inst.second()],
-                            self.program[inst.target()]
                         );
                     };
                     1
                 } else {
                     if debug {
                         println!(
-                            "not equals {} {} {}",
+                            " {} != {}",
                             self.program[inst.first()],
                             self.program[inst.second()],
-                            self.program[inst.target()]
                         );
                     };
                     0
@@ -390,9 +400,9 @@ pub mod intcode {
             loop {
                 let inst = self.parse_instruction();
                 if debug {
-                    self.print_program()
+                    self.print_program();
+                    println!("[{}]:", self.ip);
                 };
-                print!("");
                 match inst {
                     Instruction::NOOP => panic!("NOOP"),
                     Instruction::ADD(_, _, _) => self.add(inst, debug),
@@ -730,10 +740,12 @@ mod tests {
 
     #[test]
     fn day_13_part1() {
-        let program = crate::intcode::read_data("9");
-        let mut computer = crate::intcode::Amplifier::new(program, vec![2]);
-        let result = computer.run_program(false).unwrap();
-        print!("{}", result);
+        let program = crate::intcode::read_data("13");
+        let mut computer = crate::intcode::Amplifier::new(program, vec![]);
+        let result = computer.run_program_until_output(false).unwrap();
+        let result1 = computer.run_program_until_output(false).unwrap();
+        let result2 = computer.run_program_until_output(false).unwrap();
+        print!("{}, {}, {}", result, result1, result2);
     }
 
 }
