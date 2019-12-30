@@ -3,7 +3,7 @@ pub mod intcode {
     use std::convert::TryFrom;
     use std::fs;
     use std::io;
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     pub struct Amplifier {
         ip: usize,
         rb: isize,
