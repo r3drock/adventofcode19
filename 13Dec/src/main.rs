@@ -37,9 +37,9 @@ impl fmt::Display for Tile {
     }
 }
 
-fn run_3_instructions(computer: &mut intcomputer::intcode::Amplifier) -> Option<(usize, usize, isize)> {
+fn run_3_instructions(computer: &mut intcomputer::intcode::Amplifier) -> Option<(isize, usize, isize)> {
     let x = match computer.run_program_until_output(false) {
-        Some(a) => a as usize,
+        Some(a) => a,
         None => return None,
     };
     let y = match computer.run_program_until_output(false) {
@@ -62,18 +62,53 @@ fn print_screen(screen: &Vec<Vec<Tile>>, x_len: usize, y_len: usize) {
     }
 }
 
+fn count_block_tiles(screen: &Vec<Vec<Tile>>, x_len: usize, y_len: usize) -> usize {
+    let mut count = 0;
+    for y in 0..y_len {
+        for x in 0..x_len {
+            if screen[y][x] == Tile::Block {
+                count += 1
+            }
+        }
+    }
+    count
+}
+
 fn part1() {
-    let program = intcomputer::intcode::read_data("program");
+    let  program = intcomputer::intcode::read_data("program");
     let mut computer = intcomputer::intcode::Amplifier::new(program.clone(), vec![]);
-    const X_LEN: usize = 100;
-    const Y_LEN: usize = 20;
+    const X_LEN: usize = 42;
+    const Y_LEN: usize = 23;
     let mut screen = vec![vec![Tile::Empty; X_LEN]; Y_LEN];
 
     while let Some((x, y, tile_id)) = run_3_instructions(&mut computer) {
-        println!("hoho");
-        screen[y][x] = Tile::new(tile_id);
+            screen[y][x as usize] = Tile::new(tile_id);
     }
     print_screen(&screen, X_LEN, Y_LEN);
+    println!("{}",count_block_tiles(&screen, X_LEN, Y_LEN));
+
+}
+
+fn part2() {
+    let mut program = intcomputer::intcode::read_data("program");
+    program[0] = 2;
+    let mut computer = intcomputer::intcode::Amplifier::new(program.clone(), vec![]);
+    const X_LEN: usize = 42;
+    const Y_LEN: usize = 23;
+    let mut screen = vec![vec![Tile::Empty; X_LEN]; Y_LEN];
+
+    while let Some((x, y, tile_id)) = run_3_instructions(&mut computer) {
+        if x == -1 && y == 0 {
+            println!("Score {}", tile_id);
+            print_screen(&screen, X_LEN, Y_LEN);
+        }
+        else {
+            screen[y][x as usize] = Tile::new(tile_id);
+        }
+    }
+    print_screen(&screen, X_LEN, Y_LEN);
+    println!("{}",count_block_tiles(&screen, X_LEN, Y_LEN));
+
 }
 
 fn main() {
