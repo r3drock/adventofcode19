@@ -160,6 +160,10 @@ pub mod intcode {
             self.inputbuffer.push_back(input);
         }
 
+        pub fn push_input_vec(&mut self, mut input: VecDeque<isize>) {
+            self.inputbuffer.append(&mut input);
+        }
+
         fn get_access_index(&self, mode: Mode, index: usize) -> usize {
             match mode {
                 Mode::Position => conv(self.program[index]),
