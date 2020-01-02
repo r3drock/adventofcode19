@@ -9,6 +9,7 @@ use petgraph::dot::{Config, Dot};
 struct Point {
     x: usize,
     y: usize,
+    z: usize,
 }
 
 fn calculate_thickness(char_array: &Vec<Vec<char>>, x_len: usize, y_len: usize) -> usize {
@@ -24,34 +25,36 @@ fn get_outside_portals(char_array: &Vec<Vec<char>>, x_len: usize, y_len: usize) 
     let mut portals: HashMap<String, Point> = HashMap::new();
     for x in (2)..(x_len - 2) {
         if char_array[0][x].is_ascii_alphabetic() && char_array[1][x].is_ascii_alphabetic() {
-            portals.insert(format!("{}{}", char_array[0][x], char_array[1][x]), Point { x: x, y: 2 });
+            portals.insert(format!("{}{}", char_array[0][x], char_array[1][x]), Point { x: x, y: 2, z: 0});
         }
         if char_array[y_len - 2][x].is_ascii_alphabetic() && char_array[y_len - 1][x].is_ascii_alphabetic() {
-            portals.insert(format!("{}{}", char_array[y_len - 2][x], char_array[y_len - 1][x]), Point { x: x, y: y_len - 3 });
+            portals.insert(format!("{}{}", char_array[y_len - 2][x], char_array[y_len - 1][x]), Point { x: x, y: y_len - 3, z: 0});
         }
     }
     for y in (2)..(y_len - 2) {
         if char_array[y][0].is_ascii_alphabetic() && char_array[y][1].is_ascii_alphabetic() {
-            portals.insert(format!("{}{}", char_array[y][0], char_array[y][1]), Point { x: 2, y: y });
+            portals.insert(format!("{}{}", char_array[y][0], char_array[y][1]), Point { x: 2, y: y, z: 0});
         }
         if char_array[y][x_len - 2].is_ascii_alphabetic() && char_array[y][x_len - 1].is_ascii_alphabetic() {
-            portals.insert(format!("{}{}", char_array[y][x_len - 2], char_array[y][x_len - 1]), Point { x: x_len - 3, y: y });
+            portals.insert(format!("{}{}", char_array[y][x_len - 2], char_array[y][x_len - 1]), Point { x: x_len - 3, y: y, z: 0});
         }
     }
     portals
 }
 
-fn connect_normal_paths(char_array: &Vec<Vec<char>>, x_len: usize, y_len: usize) -> graphmap::UnGraphMap<Point, usize> {
-    let mut graph = graphmap::UnGraphMap::new();
+fn connect_normal_paths(char_array: &Vec<Vec<char>>, x_len: usize, y_len: usize) -> graphmap::DiGraphMap<Point, usize> {
+    let mut graph = graphmap::DiGraphMap::new();
     for y in 1..y_len {
         for x in 1..x_len {
             if char_array[y][x] == '.' {
-                graph.add_node(Point { x, y });
+                graph.add_node(Point { x, y, z: 0});
                 if char_array[y - 1][x] == '.' {
-                    graph.add_edge(Point { x, y }, Point { x: x, y: y - 1 }, 1);
+                    graph.add_edge(Point { x, y, z: 0}, Point { x: x, y: y - 1, z: 0}, 1);
+                    graph.add_edge(Point { x: x, y: y - 1, z: 0}, Point { x, y, z: 0}, 1);
                 }
                 if char_array[y][x - 1] == '.' {
-                    graph.add_edge(Point { x, y }, Point { x: x - 1, y: y }, 1);
+                    graph.add_edge(Point { x, y, z: 0}, Point { x: x - 1, y: y, z: 0}, 1);
+                    graph.add_edge(Point { x: x - 1, y: y, z: 0}, Point { x, y, z: 0}, 1);
                 }
             }
         }
@@ -59,25 +62,29 @@ fn connect_normal_paths(char_array: &Vec<Vec<char>>, x_len: usize, y_len: usize)
     graph
 }
 
-fn connect_portals(char_array: &Vec<Vec<char>>, portals: & HashMap<String, Point>, graph: &mut graphmap::UnGraphMap<Point, usize>, x_len: usize, y_len: usize, thickness: usize) {
+fn connect_portals(char_array: &Vec<Vec<char>>, portals: & HashMap<String, Point>, graph: &mut graphmap::DiGraphMap<Point, usize>, x_len: usize, y_len: usize, thickness: usize) {
     for x in (2 + thickness)..(x_len - 2 - thickness) {
         if char_array[2 + thickness][x].is_ascii_alphabetic() && char_array[2 + thickness + 1][x].is_ascii_alphabetic() {
             let portal_end = portals[&format!("{}{}", char_array[2 + thickness][x], char_array[2 + thickness + 1][x])];
-            graph.add_edge(portal_end, Point { x: x, y: 2 + thickness - 1 }, 1);
+            graph.add_edge(portal_end, Point { x: x, y: 2 + thickness - 1, z: 0}, 1);
+            graph.add_edge(Point { x: x, y: 2 + thickness - 1, z: 0},portal_end, 1);
         }
         if char_array[y_len - thickness - 3 - 1][x].is_ascii_alphabetic() && char_array[y_len - thickness - 2 - 1][x].is_ascii_alphabetic() {
             let portal_end = portals[&format!("{}{}", char_array[y_len - thickness - 3 - 1][x], char_array[y_len - thickness - 2 - 1][x])];
-            graph.add_edge(portal_end, Point { x: x, y: y_len - thickness - 2 }, 1);
+            graph.add_edge(portal_end, Point { x: x, y: y_len - thickness - 2, z: 0}, 1);
+            graph.add_edge(Point { x: x, y: y_len - thickness - 2, z: 0},portal_end, 1);
         }
     }
     for y in (2 + thickness)..(y_len - 2 - thickness) {
         if char_array[y][2 + thickness].is_ascii_alphabetic() && char_array[y][2 + thickness + 1].is_ascii_alphabetic() {
             let portal_end = portals[&format!("{}{}", char_array[y][2 + thickness], char_array[y][2 + thickness + 1])];
-            graph.add_edge(portal_end, Point { x: 2 + thickness - 1, y: y }, 1);
+            graph.add_edge(portal_end, Point { x: 2 + thickness - 1, y: y, z: 0}, 1);
+            graph.add_edge(Point { x: 2 + thickness - 1, y: y, z: 0},portal_end,1);
         }
         if char_array[y][x_len - 3 - thickness - 1].is_ascii_alphabetic() && char_array[y][x_len - thickness - 2 - 1].is_ascii_alphabetic() {
             let portal_end = portals[&format!("{}{}", char_array[y][x_len - 3 - thickness - 1], char_array[y][x_len - 2 - thickness - 1])];
-            graph.add_edge(portal_end, Point { x: x_len - thickness - 2, y: y }, 1);
+            graph.add_edge(portal_end, Point { x: x_len - thickness - 2, y: y, z: 0}, 1);
+            graph.add_edge(Point { x: x_len - thickness - 2, y: y, z: 0},portal_end,1);
         }
     }
 }
@@ -100,7 +107,7 @@ fn read_char_array(path: &str) -> Vec<Vec<char>> {
     char_array
 }
 
-fn build_maze_graph(path: &str) -> (graphmap::UnGraphMap<Point, usize>, Point, Point) {
+fn build_maze_graph(path: &str) -> (graphmap::DiGraphMap<Point, usize>, Point, Point) {
     let char_array = read_char_array(path);
 
     let y_len = char_array.len();
@@ -116,13 +123,29 @@ fn build_maze_graph(path: &str) -> (graphmap::UnGraphMap<Point, usize>, Point, P
     let start_point = portals["AA"];
     let end_point = portals["ZZ"];
 
+    let test = Point {x: 0, y: 0, z: 0};
+    dbg!(graph.remove_node(test));
 //    println!("{:?}", Dot::with_config(&graph, &[Config::EdgeNoLabel]));
 
     (graph, start_point, end_point)
 }
 
-fn main() {
+fn build_recursive_maze_graph(path: &str) -> (graphmap::DiGraphMap<Point, usize>, Point, Point) {
+    let char_array = read_char_array(path);
+    let y_len = char_array.len();
+    let x_len = char_array[0].len();
+    let mut graph = connect_normal_paths(&char_array, x_len, y_len);
+    let start_point = Point {x: 0, y: 0, z: 0};
+    let end_point = Point {x: 0, y: 0, z: 0};
+    (graph, start_point, end_point)
+}
+
+fn part1() {
     let (maze_graph, start_point, end_point) = build_maze_graph("maze");
     let len = petgraph::algo::astar(&maze_graph, start_point, |finish| finish == end_point, |_| 1, |_| 0).unwrap().0;
     println!("{}", len);
+}
+
+fn main() {
+    part1();
 }
