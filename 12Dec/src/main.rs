@@ -87,7 +87,7 @@ fn total_energy(moons: &Vec<Moon>) -> u64 {
 
 fn main() {
     let mut moons = read_data("data");
-    const ITERATIONS: u64 = 1000;
+    const ITERATIONS: u64 = 46867749;
     for _ in 0..ITERATIONS {
         iteration(&mut moons);
     }
