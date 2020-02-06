@@ -2,15 +2,18 @@ pub mod intcode {
     use std::collections::VecDeque;
     use std::sync::mpsc;
     use std::convert::TryFrom;
-    use std::fs;
+    use std::{fs, thread};
+    use std::time::Duration;
+    use std::thread::Thread;
 
     #[derive(Debug)]
     pub struct NetworkAmplifier {
         ip: usize,
         rb: isize,
-        tx: mpsc::Sender<isize>,
-        rx: mpsc::Receiver<isize>,
+        tx: mpsc::Sender<(isize,isize)>,
+        rx: mpsc::Receiver<(isize,isize)>,
         program: Vec<isize>,
+        y: Option<isize>,
     }
 
     #[derive(Copy, Clone)]
@@ -89,7 +92,7 @@ pub mod intcode {
     }
 
     fn conv(x: isize) -> usize {
-        usize::try_from(x).expect("negative instruction pointer")
+        usize::try_from(x).expect(&format!("negative instruction pointer {}",x))
     }
 
     fn get_opcode(mut value: usize) -> usize {
@@ -147,8 +150,9 @@ pub mod intcode {
                 rx: rx,
                 rb: 0,
                 ip: 0,
+                y: None,
             };
-            temp.program.append(&mut vec![0; 4 * 1024 * 10]);
+            temp.program.append(&mut vec![0; 4 * 1024 * 1000]);
             temp
         }
         pub fn new_test(program: Vec<isize>) -> NetworkAmplifier {
@@ -159,25 +163,27 @@ pub mod intcode {
                 rx: rx,
                 rb: 0,
                 ip: 0,
+                y: None,
             }
         }
 
 
-        pub fn get_input_transmitter(&self) -> mpsc::Sender<isize> {
+        pub fn get_input_transmitter(&self) -> mpsc::Sender<(isize,isize)> {
             self.tx.clone()
         }
 
-        pub fn push_input(&mut self, input: isize) {
+        pub fn push_input(&mut self, input: (isize, isize)) {
             self.tx.send(input).unwrap();
+            let a = 1 +1;
         }
 
-        pub fn push_input_vec(&mut self, input: Vec<isize>) {
+        pub fn push_input_vec(&mut self, input: Vec<(isize,isize)>) {
             for i in input {
                 self.tx.send(i).unwrap();
             }
         }
 
-        pub fn push_input_vec_deque(&mut self, input: VecDeque<isize>) {
+        pub fn push_input_vec_deque(&mut self, input: VecDeque<(isize, isize)>) {
             for i in input {
                 self.tx.send(i).unwrap();
             }
@@ -278,12 +284,21 @@ pub mod intcode {
         }
 
         fn read(&mut self, inst: Instruction, debug: bool) {
-            let input: isize = match self.rx.try_recv() {
-                Ok(num) => {
-                    if debug {println!("input {}", num);}
-                    num
+            let a = 1 + 1;
+            let input: isize = match self.y {
+                Some(y) => {self.y = None; y},
+                None => {
+                    match self.rx.try_recv() {
+                        Ok((x, y)) => {
+                            if debug { println!("input {}", x); }
+                            self.y = Some(y);
+                            x
+                        },
+                        Err(_) => {
+                            -1
+                        },
+                    }
                 },
-                Err(_) => {-1},
             };
             self.program[inst.target()] = input;
             self.ip += 2;
@@ -527,30 +542,12 @@ pub mod intcode {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn day9_part1(){
-        let program = crate::intcode::read_data("9");
+    fn day23_part1() {
+        let program = crate::intcode::read_data("23");
         let mut computer = crate::intcode::NetworkAmplifier::new(program);
-        computer.push_input(1);
-        let debug = false;
-        assert_eq!(3497884671, computer.run_program(debug).unwrap());
-    }
-
-    #[test]
-    fn day9_part2() {
-        let program = crate::intcode::read_data("9");
-        let mut computer = crate::intcode::NetworkAmplifier::new(program);
-        computer.push_input(2);
-        let debug = false;
+        computer.push_input((34, -1));
+        let debug = true;
         assert_eq!(46470, computer.run_program(debug).unwrap());
     }
-
-//    #[test]
-//    fn day23_part1() {
-//        let program = crate::intcode::read_data("23");
-//        let mut computer = crate::intcode::NetworkAmplifier::new(program);
-//        computer.push_input(0);
-//        let debug = true;
-//        assert_eq!(46470, computer.run_program(debug).unwrap());
-//    }
 }
 

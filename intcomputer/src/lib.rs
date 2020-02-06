@@ -7,6 +7,7 @@ pub mod intcode {
     pub struct Amplifier {
         ip: usize,
         rb: isize,
+        network_mode_enabled: bool,
         inputbuffer: VecDeque<isize>,
         program: Vec<isize>,
     }
@@ -141,6 +142,7 @@ pub mod intcode {
             let mut temp = Amplifier {
                 inputbuffer: VecDeque::from(input),
                 program: program,
+                network_mode_enabled: false,
                 rb: 0,
                 ip: 0,
             };
@@ -151,16 +153,25 @@ pub mod intcode {
             Amplifier {
                 inputbuffer: VecDeque::from(input),
                 program: program,
+                network_mode_enabled: false,
                 rb: 0,
                 ip: 0,
             }
+        }
+
+        pub fn set_network_mode(&mut self, new_setting: bool) {
+            self.network_mode_enabled = new_setting;
         }
 
         pub fn push_input(&mut self, input: isize) {
             self.inputbuffer.push_back(input);
         }
 
-        pub fn push_input_vec(&mut self, mut input: VecDeque<isize>) {
+        pub fn push_input_vec(&mut self, input: Vec<isize>) {
+            self.inputbuffer.append(&mut VecDeque::from(input));
+        }
+
+        pub fn push_input_vec_deque(&mut self, mut input: VecDeque<isize>) {
             self.inputbuffer.append(&mut input);
         }
 
@@ -265,19 +276,23 @@ pub mod intcode {
                         println!("input {}", num);
                     };
                     num
-                }
+                },
                 None => {
-                    let mut input_string = String::new();
-                    println!("Please input a number.");
-                    io::stdin()
-                        .read_line(&mut input_string)
-                        .expect("error reading line");
+                    if self.network_mode_enabled {
+                        -1
+                    } else {
+                        let mut input_string = String::new();
+                        println!("Please input a number.");
+                        io::stdin()
+                            .read_line(&mut input_string)
+                            .expect("error reading line");
 
-                    match input_string.trim().parse() {
-                        Ok(num) => num,
-                        Err(_) => return,
+                        match input_string.trim().parse() {
+                            Ok(num) => num,
+                            Err(_) => return,
+                        }
                     }
-                }
+                },
             };
             self.program[inst.target()] = input;
             self.ip += 2;
@@ -752,4 +767,12 @@ mod tests {
         print!("{}, {}, {}", result, result1, result2);
     }
 
+    
+    #[test]
+    fn day23_part1() {
+        let program = crate::intcode::read_data("23");
+        let mut computer = crate::intcode::Amplifier::new(program,vec![-1]);
+        let debug = true;
+        assert_eq!(46470, computer.run_program(debug).unwrap());
+    }
 }
