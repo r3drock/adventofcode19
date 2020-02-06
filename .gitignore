@@ -22,3 +22,6 @@
 23Dec/target
 24Dec/target
 25Dec/target
+
+*.idea
+*.vscode
